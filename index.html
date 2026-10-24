@@ -62,6 +62,8 @@ function room(){const h=S.isHost;
   return `<div class="top"><b>Room ${S.code}</b><span><button class="sm" onclick="ui.inv=!ui.inv;render()">Invite</button> <button class="sm" onclick="leave()">Leave</button></span></div>
   ${ui.inv||(S.phase==='lobby'&&h)?`<div class="card center"><div id="qr"></div><div class="code">${S.code}</div><p class="mu">Scan, or open ${esc(link())}</p></div>`:''}
   ${body()}<div class="ppl">${S.players.map(p=>`<span class="${p.on?'':'off'}">${p.emoji} ${esc(p.name)}${p.host?' ⭐':''}${p.done?' ✓':''}</span>`).join('')}</div>`}
+const bar2=(l,n,m)=>`<div class="row"><span>${esc(l)}</span><div class="track"><i style="width:${m?n/m*100:0}%"></i></div><b>${n}</b></div>`;
+const lb=(n=99)=>S.board.slice(0,n).map((p,i)=>`<div class="note"><span>${['🥇','🥈','🥉'][i]||(i+1)+'.'} ${p.emoji} ${esc(p.name)}</span><b>${p.score}</b></div>`).join('');
 const wait='<div class="card center"><p class="mu">Waiting for the facilitator…</p></div>';
 const host=l=>S.isHost?`<div class="bar"><button class="pri" onclick="act('next')">${l}</button></div>`:wait;
 const timer=()=>S.endsAt?'<span class="pill" id="timer"></span>':'';
@@ -69,7 +71,7 @@ function body(){const g=S.game,h=S.isHost;
   if(S.phase==='lobby'){if(!h)return wait;const cats=['All',...new Set(S.list.map(x=>x.cat))];
     return `<div class="card"><h2>Pick a game (${S.list.length})</h2><div class="chips">${cats.map(c=>`<button class="chip ${ui.cat===c?'on':''}" onclick="ui.cat='${c}';render()">${c}</button>`).join('')}</div>
     <div class="grid">${S.list.filter(x=>ui.cat==='All'||x.cat===ui.cat).map(x=>`<button class="g" onclick="act('pick',{id:'${x.id}'})"><b>${esc(x.title)}</b><small>${esc(x.desc)}</small></button>`).join('')}</div></div>`}
-  if(S.phase==='ready')return `<div class="card"><h2>${esc(g.title)}</h2><p>${esc(g.desc)}</p><p class="mu">${esc(g.prompt||g.qs.join(', '))}</p>${h?
+  if(S.phase==='ready')return `<div class="card"><h2>${esc(g.title)}</h2><p>${esc(g.desc)}</p><p class="mu">${esc(g.prompt||(g.qs?g.qs.join(', '):g.n+' rounds'))}</p>${h?
     `<label class="mu">Timer <select onchange="ui.secs=+this.value"><option value="0">None</option>${[3,5,10].map(m=>`<option value="${m*60}" ${ui.secs==m*60?'selected':''}>${m} min</option>`).join('')}</select></label>
     <button class="pri" onclick="act('start',{secs:ui.secs})">Start game</button><button onclick="act('lobby')">Pick another game</button>`:'<p class="mu">Get ready…</p>'}</div>`;
   if(S.phase==='collect'){
@@ -79,12 +81,19 @@ function body(){const g=S.game,h=S.isHost;
       <div class="card"><b>Your cards</b>${S.mine.map(c=>`<div class="note"><span>${g.cols?`<small>${esc(g.cols[c.col])}</small>`:''}${esc(c.text)}</span><button class="x" aria-label="Delete" onclick="act('del',{id:'${c.id}'})">✕</button></div>`).join('')||'<p class="mu">No cards yet.</p>'}</div>${host('Start voting')}`;
     if(g.type==='scale')return `<div class="card"><h2>${esc(g.title)}</h2>${timer()}</div>${g.qs.map((q,i)=>`<div class="card"><b>${esc(q)}</b><div class="scale">${[...Array(g.max)].map((_,k)=>`<button class="n ${(S.myAns||[])[i]===k+1?'on':''}" onclick="act('rate',{q:${i},v:${k+1}})">${k+1}</button>`).join('')}</div><div class="between mu"><span>${g.lo}</span><span>${g.hi}</span></div></div>`).join('')}${host('Reveal results')}`;
     return `<div class="card"><h2>${esc(g.title)}</h2><p>${esc(g.prompt)}</p>${timer()}${g.opts.map((o,i)=>`<button class="opt ${S.myAns===i?'on':''}" onclick="act('choose',{i:${i}})">${esc(o)}</button>`).join('')}</div>${host('Reveal results')}`}
+  if(S.phase==='play'){const d=S.rd,q=g.type==='quiz',m=Math.max(1,...(d.c||[0])),ans=S.players.filter(p=>p.done).length;
+    return `<div class="card"><div class="between mu"><span>${esc(g.title)}</span><span>Round ${d.i+1}/${d.n}</span></div><h2>${esc(d.q)}</h2>${timer()}
+    ${d.show?d.o.map((o,i)=>bar2((q&&i===d.a?'✅ ':'')+(d.my===i?'👉 ':'')+o,d.c[i],m)).join(''):d.o.map((o,i)=>`<button class="opt ${d.my===i?'on':''}" ${q&&d.my!=null?'disabled':''} onclick="act('answer',{c:${i}})">${esc(o)}</button>`).join('')}
+    <p class="mu">${ans}/${S.players.length} answered</p></div>
+    ${d.show&&S.board?`<div class="card"><b>Leaderboard</b>${lb(5)}</div>`:''}
+    ${S.isHost?`<div class="bar"><button class="pri" onclick="act('next')">${d.show?(d.i+1>=d.n?'Final results':'Next round'):(q?'Reveal answer':'Show results')}</button></div>`:wait}`}
   if(S.phase==='vote')return `<div class="card"><h2>Vote</h2><p>Tap cards you want to discuss. <b>${S.left}</b> of 3 dots left.</p></div>
     ${(g.cols||['']).map((c,i)=>{const k=S.cards.filter(x=>x.col===i);return k.length?`<div class="card">${c?`<b>${esc(c)}</b>`:''}${k.map(x=>`<button class="note vote ${x.mine?'on':''}" onclick="act('vote',{id:'${x.id}'})">${esc(x.text)}${x.mine?'<span class="dots">●</span>':''}</button>`).join('')}</div>`:''}).join('')}${host('Show results')}`;
   const bar=(l,n,m)=>`<div class="row"><span>${esc(l)}</span><div class="track"><i style="width:${m?n/m*100:0}%"></i></div><b>${n}</b></div>`;
   let r='';
   if(g.type==='text')r=(g.cols||['']).map((c,i)=>`<div class="card">${c?`<b>${esc(c)}</b>`:''}${S.cards.filter(x=>x.col===i).map(x=>`<div class="note"><span>${esc(x.text)}</span><span class="dots">${x.votes?'● '+x.votes:''}</span></div>`).join('')||'<p class="mu">No cards.</p>'}</div>`).join('');
   else if(g.type==='scale')r=g.qs.map((q,i)=>{const x=S.res[i],m=Math.max(...x.dist);return `<div class="card"><b>${esc(q)}</b><div class="avg">${x.avg.toFixed(1)} <small class="mu" style="font-size:1rem">avg · ${x.n} votes</small></div>${x.dist.map((n,k)=>bar(k+1,n,m)).join('')}</div>`}).join('');
+  else if(g.n)r=S.board?`<div class="card"><b>Leaderboard</b>${lb()}</div>`:S.sum.map(x=>`<div class="card"><b>${esc(x.q)}</b>${x.o.map((o,i)=>bar2(o,x.c[i],Math.max(...x.c))).join('')}</div>`).join('');
   else{const m=Math.max(...S.res);r=`<div class="card">${g.opts.map((o,i)=>bar(o,S.res[i],m)).join('')}</div>`}
   return `<div class="card"><h2>${esc(g.title)}: results</h2></div>${r}${h?`<div class="bar"><button class="pri" onclick="act('lobby')">Back to games</button></div>`:wait}`}
 setInterval(()=>{const t=$('#timer');if(t&&S&&S.endsAt){const s=Math.max(0,Math.round((S.endsAt-Date.now())/1e3));t.textContent='⏱ '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}},500);

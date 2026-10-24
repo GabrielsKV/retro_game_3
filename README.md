@@ -1,6 +1,6 @@
 # RetroHub
 
-Real-time retro games for Scrum Masters. Up to 15 people join from any phone or computer by QR code or room code, on any network. 36 games, zero dependencies (plain Node.js, Server-Sent Events).
+Real-time retro games for Scrum Masters. Up to 15 people join from any phone or computer by QR code or room code, on any network. 55 games, zero dependencies (plain Node.js, Server-Sent Events).
 
 ## Run locally
     node server.js        # http://localhost:8080
