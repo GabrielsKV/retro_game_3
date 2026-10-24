@@ -33,7 +33,7 @@ const push=r=>{for(const c of r.clients)c.res.write(`data:${JSON.stringify(view(
 function act(r,pid,b){
   const host=pid===r.host,g=GAMES.find(x=>x.id===r.game),need=()=>{if(!host)throw Error('Only the facilitator can do that')};
   switch(b.a){
-    case'pick':need();if(!GAMES.some(x=>x.id===b.id))throw Error('Unknown game');Object.assign(r,{game:b.id,phase:'ready',cards:[],ans:{},endsAt:null});break;
+    case'pick':need();if(!GAMES.some(x=>x.id===b.id))throw Error('Unknown game');Object.assign(r,{game:b.id,phase:'ready',cards:[],ans:{},endsAt:null,picks:[],score:{},names:[],i:0,show:false});break;
     case'start':need();if(!g)return;
       if(g.rounds){Object.assign(r,{phase:'play',i:0,show:false,picks:[],score:{},names:Object.values(r.players).map(p=>p.name)});r.endsAt=g.type==='quiz'?Date.now()+20000:null;break}
       Object.assign(r,{phase:'collect',cards:[],ans:{},endsAt:b.secs>0?Date.now()+Math.min(b.secs,3600)*1000:null});break;
@@ -79,7 +79,7 @@ http.createServer(async(req,res)=>{
     const b=JSON.parse(body||'{}');
     if(u.pathname==='/api/room'){
       const name=clean(b.name);if(!name)throw Error('Enter your name');
-      const r={code:newCode(),host:rid(6),players:{},clients:new Set(),phase:'lobby',game:null,cards:[],ans:{},endsAt:null,t:Date.now()};
+      const r={code:newCode(),host:rid(6),players:{},clients:new Set(),phase:'lobby',game:null,cards:[],ans:{},endsAt:null,t:Date.now(),picks:[],score:{},names:[],i:0,show:false};
       r.players[r.host]={name,emoji:EMOJI[0]};rooms.set(r.code,r);return json(res,200,{code:r.code,pid:r.host});
     }
     const r=rooms.get(String(b.code||'').toUpperCase());if(!r)return json(res,404,{error:'Room not found. Check the code.'});
